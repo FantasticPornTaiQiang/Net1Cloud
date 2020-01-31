@@ -7,10 +7,22 @@
     android:orientation="vertical"
     tools:context=".activity.LocalMusicActivity">
 
+    <com.hz.android.keyboardlayout.KeyboardLayout
+        android:id="@+id/keyboard_layout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
 
+    <com.bilibili.magicasakura.widgets.TintToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/theme_color_primary"
+        android:minHeight="?attr/actionBarSize"
+        android:theme="@style/Theme.AppCompat"
+        app:popupTheme="@style/ThemeOverlay.AppCompat.Dark" />
 
     <RelativeLayout
-        android:id="@+id/ly_playAll"
+        android:id="@+id/layout_play_all"
         android:layout_width="match_parent"
         android:layout_height="55dp"
         android:layout_gravity="bottom"
@@ -47,7 +59,7 @@
             android:textSize="14sp" />
 
         <ImageView
-            android:id="@+id/select"
+            android:id="@+id/manage_local_music_list_btn"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:layout_alignParentRight="true"

@@ -2,6 +2,7 @@ package com.example.net1cloud.adapter;
 
 import android.text.TextPaint;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,7 +15,6 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.net1cloud.R;
 import com.example.net1cloud.data.Music;
 import com.example.net1cloud.listener.OnItemClickListener;
-import com.example.net1cloud.utils.MusicInfoUtil;
 
 import java.util.List;
 
@@ -44,10 +44,14 @@ public class LocalMusicRecycleViewAdapter extends RecyclerView.Adapter {
         }
     }
 
-    private List<Music> localMusicList;
+    private List<Music> localMusicInfoList;
 
-    public LocalMusicRecycleViewAdapter(List<String> localMusicPathList) {
-        localMusicList = MusicInfoUtil.getMusics(localMusicPathList);
+    public LocalMusicRecycleViewAdapter(List<Music> localMusicInfoList) {
+        this.localMusicInfoList = localMusicInfoList;
+    }
+
+    public void setLocalMusicInfoList(List<Music> localMusicInfoList) {
+        this.localMusicInfoList = localMusicInfoList;
     }
 
     private OnItemClickListener myClickListener;
@@ -64,12 +68,8 @@ public class LocalMusicRecycleViewAdapter extends RecyclerView.Adapter {
     @Override
     public void onBindViewHolder(RecyclerView.ViewHolder viewHolder, final int position) {
         LocalMusicListViewHolder localMusicListViewHolder = (LocalMusicListViewHolder) viewHolder;
-
-
-            localMusicListViewHolder.localMusicNameTextView.setText(localMusicList.get(position).getName());
-
-
-        localMusicListViewHolder.localMusicAlbumNameTextView.setText(localMusicList.get(position).getArtist() + " - " + localMusicList.get(position).getAlbum());
+        localMusicListViewHolder.localMusicNameTextView.setText(localMusicInfoList.get(position).getName());
+        localMusicListViewHolder.localMusicAlbumNameTextView.setText(localMusicInfoList.get(position).getArtist() + " - " + localMusicInfoList.get(position).getAlbum());
         localMusicListViewHolder.localMusicMenuImageButton.setOnClickListener(view -> {
 
         });
@@ -83,6 +83,6 @@ public class LocalMusicRecycleViewAdapter extends RecyclerView.Adapter {
 
     @Override
     public int getItemCount() {
-        return localMusicList.size();
+        return localMusicInfoList.size();
     }
 }
