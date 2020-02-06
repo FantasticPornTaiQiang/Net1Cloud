@@ -3,13 +3,9 @@ package com.example.net1cloud.activity;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
-import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
-import androidx.fragment.app.FragmentStatePagerAdapter;
-import androidx.viewpager.widget.ViewPager;
+import androidx.fragment.app.FragmentTransaction;
 
-import android.animation.AnimatorSet;
-import android.animation.ObjectAnimator;
 import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -18,27 +14,31 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
-import android.os.Message;
-import android.text.TextUtils;
+import android.util.Log;
 import android.view.View;
-import android.view.animation.Interpolator;
-import android.view.animation.LinearInterpolator;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
-import android.widget.Scroller;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.example.net1cloud.R;
+import com.example.net1cloud.data.FragmentMsg;
 import com.example.net1cloud.data.Music;
+import com.example.net1cloud.fragment.SaveAlbumImageFragment;
 import com.example.net1cloud.utils.MusicInfoUtil;
 import com.example.net1cloud.utils.TimeUtil;
-import com.example.net1cloud.widget.AlbumViewPager;
+import com.example.net1cloud.utils.ToastUtil;
 import com.example.net1cloud.widget.PlaySeekBar;
 import com.example.net1cloud.widget.RoundAlbumAndNeedle;
 
-import java.lang.reflect.Field;
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import static com.example.net1cloud.service.PlayMusicService.*;
 
@@ -54,8 +54,14 @@ public class PlayingActivity extends AppCompatActivity{
     private ImageView playingPreButton;
     private ImageView playingNextButton;
     private RoundAlbumAndNeedle roundAlbumAndNeedle;
+    private ImageView albumButton;
+    private FrameLayout saveAlbumImageContainer;
 //    private AlbumViewPager albumViewPager;
 //    private FragmentAdapter albumAdapter;
+
+    private FragmentManager fragmentManager;
+    private FragmentTransaction fragmentTransaction;
+    private SaveAlbumImageFragment saveAlbumImageFragment;
 
     private List<Music> musicList = new ArrayList<>();
     private int index = 0;
@@ -80,19 +86,30 @@ public class PlayingActivity extends AppCompatActivity{
 
     @Override
     public void onBackPressed() {
-        super.onBackPressed();
         //stopAnim();
         Intent intent = new Intent();
         intent.putExtra("index", index);
         intent.putExtra("state", state);
-        setResult(RESULT_OK, intent);
+        setResult(RESULT_FIRST_USER, intent);
         finish();
+        super.onBackPressed();
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
         unregisterReceiver(musicPlayActivityBroadcastReceiver);
+        EventBus.getDefault().unregister(this);
+    }
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void onGetFragmentChangeMessage(FragmentMsg fragmentMsg) {
+        if ("SaveAlbumImageFragment".equals(fragmentMsg.getWhatFragment())) {
+            if (fragmentMsg.getMsgString().equals(getString(R.string.hideFragment))) {
+//                    fragmentTransaction.remove(fragmentManager.findFragmentByTag("SaveAlbumImageFragment")).commit();
+                saveAlbumImageContainer.setVisibility(View.GONE);
+            }
+        }
     }
 
     /**
@@ -161,7 +178,7 @@ public class PlayingActivity extends AppCompatActivity{
         }
         if (playPattern == RANDOMLY) {//随机播放
             do {
-                i = (int) (Math.random() * (musicList.size() - 1));
+                i = (int) (Math.random() * musicList.size());
             } while (i == index);
         }
         return i;
@@ -176,7 +193,7 @@ public class PlayingActivity extends AppCompatActivity{
         }
         if (playPattern == RANDOMLY) {//随机播放
             do {
-                i = (int) (Math.random() * (musicList.size() - 1));
+                i = (int) (Math.random() * musicList.size());
             } while (i == index);
         }
         if (playPattern == ONLY && isAutoNext) {//单曲循环
@@ -193,7 +210,8 @@ public class PlayingActivity extends AppCompatActivity{
     }
 
     //播放模式改变
-    public void playPatternChange() {
+    @SuppressLint("ShowToast")
+    public void playPatternChange(boolean toast) {
         if (playPattern > 2) {
             playPattern = 0;
         }
@@ -204,12 +222,18 @@ public class PlayingActivity extends AppCompatActivity{
 
         switch (playPattern) {
             case ORDERLY:
+                if(toast)
+                    ToastUtil.showMyToast(Toast.makeText(this, "列表循环", Toast.LENGTH_SHORT), 1500);
                 playingModeButton.setImageResource(R.drawable.play_icn_loop_prs);
                 break;
             case RANDOMLY:
+                if(toast)
+                    ToastUtil.showMyToast(Toast.makeText(this, "随机播放", Toast.LENGTH_SHORT), 1500);
                 playingModeButton.setImageResource(R.drawable.play_icn_shuffle);
                 break;
             case ONLY:
+                if(toast)
+                    ToastUtil.showMyToast(Toast.makeText(this, "单曲循环", Toast.LENGTH_SHORT), 1500);
                 playingModeButton.setImageResource(R.drawable.play_icn_one_prs);
                 break;
             default:
@@ -242,9 +266,12 @@ public class PlayingActivity extends AppCompatActivity{
         registerActivityBroadcastReceiver();
         updatePlayOrPauseUI(state, false);
         showPlayInfo();
+        EventBus.getDefault().register(this);
     }
 
     private void initView() {
+        initFragment();
+
         totalTextView = findViewById(R.id.music_duration);
         totalTextView.setText(musicList.get(index).getDuration());
         currentTextView = findViewById(R.id.music_duration_played);
@@ -271,10 +298,10 @@ public class PlayingActivity extends AppCompatActivity{
             toolbar.setNavigationOnClickListener(v -> onBackPressed());
         }
         playingModeButton = findViewById(R.id.playing_mode);
-        playPatternChange();
+        playPatternChange(false);
         playingModeButton.setOnClickListener(view -> {
             playPattern++;
-            playPatternChange();
+            playPatternChange(true);
         });
         playingPreButton = findViewById(R.id.playing_pre);
         playingNextButton = findViewById(R.id.playing_next);
@@ -311,9 +338,17 @@ public class PlayingActivity extends AppCompatActivity{
             musicList.get(index).setAlbumImage(((BitmapDrawable) getResources().getDrawable(R.drawable.placeholder_disk_play_song, null)).getBitmap());
             musicList.get(index).setHasAlbumImage(true);
         }
-        roundAlbumAndNeedle.setPlayAvater(musicList.get(index).getAlbumImage());
+        roundAlbumAndNeedle.setAlbumImage(musicList.get(index).getAlbumImage());
 //        albumViewPager = findViewById(R.id.album_view_pager);
 //        setViewPager();
+
+        albumButton = findViewById(R.id.album_btn);
+        albumButton.setOnLongClickListener(view -> {
+            ((SaveAlbumImageFragment) Objects.requireNonNull(fragmentManager.findFragmentByTag("SaveAlbumImageFragment"))).setAlbumImage(musicList.get(index).getAlbumImage());
+            saveAlbumImageContainer.setVisibility(View.VISIBLE);
+            //fragmentTransaction.show(saveAlbumImageFragment);
+            return false;
+        });
     }
 
 //    private void setViewPager() {
@@ -511,10 +546,20 @@ public class PlayingActivity extends AppCompatActivity{
 //
 //    }
 
+    private void initFragment() {
+        fragmentManager = getSupportFragmentManager();
+        fragmentTransaction = fragmentManager.beginTransaction();
+        saveAlbumImageContainer = findViewById(R.id.save_album_image_container);
+        saveAlbumImageFragment = new SaveAlbumImageFragment();
+        fragmentTransaction.add(R.id.save_album_image_container, saveAlbumImageFragment, "SaveAlbumImageFragment").commit();
+        saveAlbumImageContainer.setVisibility(View.GONE);
+    }
+
     //根据状态更改播放暂停按钮UI界面
     //播放有三种情况，1.刚进入此activity需要手动设置播放图标，相当于在代码中点了一下控件
     //2.播放完歌曲，进入下一首，更新图标，此时只更新图标，圆盘的处理逻辑已经内部写好，无需改动[bug在此产生]
     //3.歌曲已经是暂停状态，用户点击播放，更新图标
+    //有个bug，state会有一次值为-1，暂时先采用笨办法解决
     private void updatePlayOrPauseUI(int state, boolean isNext) {
         switch (state) {
             case START:
@@ -527,6 +572,7 @@ public class PlayingActivity extends AppCompatActivity{
                 playingPlayButton.setImageResource(R.drawable.play_rdi_btn_play);
                 break;
             default:
+                if(!isNext) roundAlbumAndNeedle.play();
                 break;
         }
     }

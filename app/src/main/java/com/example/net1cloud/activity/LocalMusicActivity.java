@@ -4,9 +4,12 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SearchView;
 import androidx.appcompat.widget.Toolbar;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.app.Dialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -14,21 +17,29 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.KeyboardShortcutGroup;
+import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.view.inputmethod.InputMethodManager;
-import android.widget.ImageView;
-import android.widget.RelativeLayout;
+import android.view.ViewGroup;
+import android.view.Window;
 import android.widget.Toast;
 
 import com.example.net1cloud.R;
 import com.example.net1cloud.adapter.LocalMusicRecycleViewAdapter;
+import com.example.net1cloud.data.FragmentMsg;
 import com.example.net1cloud.data.Music;
+import com.example.net1cloud.fragment.LocalMusicChooseFragment;
+import com.example.net1cloud.fragment.LocalMusicManageChooseFragment;
+import com.example.net1cloud.fragment.ManageLocalMusicListFragment;
+import com.example.net1cloud.utils.DeleteSongsUtil;
 import com.example.net1cloud.utils.MusicInfoUtil;
 import com.example.net1cloud.utils.PermissionUtil;
 import com.hz.android.keyboardlayout.KeyboardLayout;
+
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
 
 import java.io.File;
 import java.io.Serializable;
@@ -53,98 +64,135 @@ public class LocalMusicActivity extends AppCompatActivity {
     private int state = START;
     private int playPattern = ORDERLY;//0：列表循环 1：随机播放 2：单曲循环
     private boolean isSearchResult = false;
+    boolean isBundleNull;
+    boolean isManaging = false;
 
     private LocalMusicRecycleViewAdapter localMusicRecycleViewAdapter;
     private LocalMusicActivityBroadcastReceiver localMusicActivityBroadcastReceiver;
     private RecyclerView localMusicListRecyclerView;
     private Toolbar toolbar;
     private SearchView searchView;
-    private RelativeLayout playAllRelativeLayout;
-    private ImageView manageLocalMusicListButton;
     private KeyboardLayout keyboardLayout;
+
+    private FragmentManager fragmentManager;
+   // private FragmentTransaction fragmentTransaction;
+    private ManageLocalMusicListFragment manageLocalMusicListFragment;
+    private LocalMusicManageChooseFragment localMusicManageChooseFragment;
+    private LocalMusicChooseFragment localMusicChooseFragment;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_local_music);
 
-        registerActivityBroadcastReceiver();
-
+        isBundleNull = savedInstanceState == null;
         initEvent();
         initView();
     }
 
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void onGetFragmentChangeMessage(FragmentMsg fragmentMsg) {
+        if ("LocalMusicManageChooseFragment".equals(fragmentMsg.getWhatFragment())) {
+            if (fragmentMsg.getMsgString().equals(getString(R.string.manage))) {
+                showBottomDialog(R.layout.local_music_manage_dialog);
+            } else if (fragmentMsg.getMsgString().equals(getString(R.string.playAll))) {
+                index = 0;
+                //点击全部播放则默认播放第一首歌
+                if(!MusicInfoUtil.NowMusicPath.equals(localMusicPathList.get(index))){
+                    Intent intent1 = new Intent();
+                    intent1.setAction("com.example.net1cloud.playMusicService");
+                    intent1.putExtra("musicPath", localMusicPathList.get(index));
+                    intent1.putExtra("newMusic", true);
+                    sendBroadcast(intent1);
+                }
+
+                Intent intent = new Intent(LocalMusicActivity.this, PlayingActivity.class);
+                intent.putExtra("localMusicPathList", (Serializable) localMusicPathList);
+                intent.putExtra("index", index);
+                intent.putExtra("state", state);
+                startActivity(intent);
+            }
+        } else if ("LocalMusicChooseFragment".equals(fragmentMsg.getWhatFragment())) {
+            if (fragmentMsg.getMsgString().equals(getString(R.string.complete))) {
+                isManaging = false;
+                localMusicRecycleViewAdapter.setChooseBoxVisibility(false);
+                localMusicRecycleViewAdapter.notifyDataSetChanged();
+                localMusicChooseFragment.setSelectAll(false);
+                fragmentManager.beginTransaction().replace(R.id.manage_bar_container, localMusicManageChooseFragment).commit();
+                fragmentManager.beginTransaction().hide(manageLocalMusicListFragment).commit();
+            } else if (fragmentMsg.getMsgString().equals(getString(R.string.chooseAll))) {
+                localMusicRecycleViewAdapter.setSelectAll();
+                localMusicRecycleViewAdapter.notifyDataSetChanged();
+            }
+        } else if ("ManageLocalMusicListFragment".equals(fragmentMsg.getWhatFragment())) {
+            if(localMusicRecycleViewAdapter.isSelectSongs()) {
+                showBottomDialog(R.layout.confirm_delete_dialog);
+            }
+        }
+    }
+
     private void initEvent() {
+        registerActivityBroadcastReceiver();
         loadLocalMusic();
+        initFragment();
+        EventBus.getDefault().register(this);
     }
 
     //TODO:1.管理歌单操作（记得同步本地、localMusicPathList、localMusicInfoList）
 
+    private void initFragment() {
+        fragmentManager = getSupportFragmentManager();
+        manageLocalMusicListFragment = new ManageLocalMusicListFragment();
+        localMusicManageChooseFragment = new LocalMusicManageChooseFragment();
+        localMusicChooseFragment = new LocalMusicChooseFragment();
+        fragmentManager.beginTransaction().replace(R.id.manage_bar_container, localMusicManageChooseFragment)
+                .add(R.id.manage_local_music_list_fragment_container, manageLocalMusicListFragment)
+                .hide(manageLocalMusicListFragment).commit();
+    }
+
     private void initView() {
         localMusicListRecyclerView = findViewById(R.id.local_music_list_recycler_view);
         localMusicInfoList = MusicInfoUtil.getMusics(localMusicPathList);
-        localMusicRecycleViewAdapter = new LocalMusicRecycleViewAdapter(localMusicInfoList);
+        localMusicRecycleViewAdapter = new LocalMusicRecycleViewAdapter(localMusicInfoList, this);
         localMusicListRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         localMusicListRecyclerView.setAdapter(localMusicRecycleViewAdapter);
         localMusicRecycleViewAdapter.setOnItemClickListener(position -> {
-            if(!isSearchResult) {
-                index = position;
-            } else {
-                Music music = localMusicResultList.get(position);
-                int i = 0;
-                for(; i < localMusicInfoList.size(); i++){
-                    if(localMusicInfoList.get(i).getName().equals(music.getName()) &&
-                            localMusicInfoList.get(i).getAlbum().equals(music.getAlbum()) &&
-                            localMusicInfoList.get(i).getArtist().equals(music.getArtist())) {
-                        break;
+            if(!isManaging) {
+                if(!isSearchResult) {
+                    index = position;
+                } else {
+                    Music music = localMusicResultList.get(position);
+                    int i = 0;
+                    for(; i < localMusicInfoList.size(); i++){
+                        if(localMusicInfoList.get(i).getName().equals(music.getName()) &&
+                                localMusicInfoList.get(i).getAlbum().equals(music.getAlbum()) &&
+                                localMusicInfoList.get(i).getArtist().equals(music.getArtist())) {
+                            break;
+                        }
                     }
+                    index = i;
                 }
-                index = i;
-            }
 
-            //发送广播通知服务播放新歌曲
-            if(!MusicInfoUtil.NowMusicPath.equals(localMusicPathList.get(position))){
-                Intent intent1 = new Intent();
-                intent1.setAction("com.example.net1cloud.playMusicService");
-                intent1.putExtra("musicPath", localMusicPathList.get(position));
-                intent1.putExtra("newMusic", true);
-                sendBroadcast(intent1);
-            }
+                //发送广播通知服务播放新歌曲
+                if(!MusicInfoUtil.NowMusicPath.equals(localMusicPathList.get(position))){
+                    Intent intent1 = new Intent();
+                    intent1.setAction("com.example.net1cloud.playMusicService");
+                    intent1.putExtra("musicPath", localMusicPathList.get(position));
+                    intent1.putExtra("newMusic", true);
+                    sendBroadcast(intent1);
+                }
 
-            Intent intent = new Intent(LocalMusicActivity.this, PlayingActivity.class);
-            intent.putExtra("localMusicPathList", (Serializable) localMusicPathList);
-            intent.putExtra("index", index);
-            intent.putExtra("state", state);
-            startActivity(intent);
+                Intent intent = new Intent(LocalMusicActivity.this, PlayingActivity.class);
+                intent.putExtra("localMusicPathList", (Serializable) localMusicPathList);
+                intent.putExtra("index", index);
+                intent.putExtra("state", state);
+                startActivityForResult(intent, REQUEST_CODE_MUSIC_PLAY);
+            }
         });
 
         toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         Objects.requireNonNull(getSupportActionBar()).setDisplayHomeAsUpEnabled(true);
-
-        playAllRelativeLayout = findViewById(R.id.layout_play_all);
-        playAllRelativeLayout.setOnClickListener(view -> {
-            index = 0;
-            //点击全部播放则默认播放第一首歌
-            if(!MusicInfoUtil.NowMusicPath.equals(localMusicPathList.get(index))){
-                Intent intent1 = new Intent();
-                intent1.setAction("com.example.net1cloud.playMusicService");
-                intent1.putExtra("musicPath", localMusicPathList.get(index));
-                intent1.putExtra("newMusic", true);
-                sendBroadcast(intent1);
-            }
-
-            Intent intent = new Intent(LocalMusicActivity.this, PlayingActivity.class);
-            intent.putExtra("localMusicPathList", (Serializable) localMusicPathList);
-            intent.putExtra("index", index);
-            intent.putExtra("state", state);
-            startActivity(intent);
-        });
-
-        manageLocalMusicListButton = findViewById(R.id.manage_local_music_list_btn);
-        manageLocalMusicListButton.setOnClickListener(view -> {
-            //TODO::
-        });
 
         keyboardLayout = findViewById(R.id.keyboard_layout);
         keyboardLayout.setKeyboardLayoutListener((isActive, keyboardHeight) -> {
@@ -173,6 +221,14 @@ public class LocalMusicActivity extends AppCompatActivity {
             public boolean onQueryTextChange(final String newText) {
                 isSearchResult = !newText.trim().equals("");
                 updateSearchResult(newText);
+                if(isManaging) {
+                    isManaging = false;
+                    localMusicRecycleViewAdapter.setChooseBoxVisibility(false);
+                    localMusicRecycleViewAdapter.notifyDataSetChanged();
+                    localMusicChooseFragment.setSelectAll(false);
+                    fragmentManager.beginTransaction().replace(R.id.manage_bar_container, localMusicManageChooseFragment).commit();
+                    fragmentManager.beginTransaction().hide(manageLocalMusicListFragment).commit();
+                }
                 return true;
             }
         });
@@ -211,12 +267,14 @@ public class LocalMusicActivity extends AppCompatActivity {
     private void updateSearchResult(String what) {
         //不写这个if也是可以的，太巧妙了！
         if(what.trim().equals("")){
-            playAllRelativeLayout.setVisibility(View.VISIBLE);
+//            playAllRelativeLayout.setVisibility(View.VISIBLE);
+            fragmentManager.beginTransaction().show(localMusicManageChooseFragment).commit();
             localMusicRecycleViewAdapter.setLocalMusicInfoList(localMusicInfoList);
             localMusicRecycleViewAdapter.notifyDataSetChanged();
         } else {
             what = what.toLowerCase();
-            playAllRelativeLayout.setVisibility(View.GONE);
+//            playAllRelativeLayout.setVisibility(View.GONE);
+            fragmentManager.beginTransaction().hide(localMusicManageChooseFragment).commit();
             localMusicResultList.clear();
             for(Music localMusicInfo : localMusicInfoList) {
                 if(localMusicInfo.getName().toLowerCase().contains(what)
@@ -234,6 +292,7 @@ public class LocalMusicActivity extends AppCompatActivity {
     protected void onDestroy() {
         super.onDestroy();
         unregisterReceiver(localMusicActivityBroadcastReceiver);
+        EventBus.getDefault().unregister(this);
     }
 
     private void registerActivityBroadcastReceiver() {
@@ -275,7 +334,7 @@ public class LocalMusicActivity extends AppCompatActivity {
         }
         if (playPattern == RANDOMLY) {//随机播放
             do {
-                i = (int) (Math.random() * (localMusicPathList.size() - 1));
+                i = (int) (Math.random() * localMusicPathList.size());
             } while (i == index);
         }
         if (playPattern == ONLY) {//单曲循环
@@ -284,16 +343,16 @@ public class LocalMusicActivity extends AppCompatActivity {
         return i;
     }
 
-
-
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == REQUEST_CODE_MUSIC_PLAY) {
-            if (resultCode == RESULT_OK) {
+            if (resultCode == RESULT_FIRST_USER) {
                 playPattern = getPlayPattern();
-                index = data.getIntExtra("index", -1);
-                state = data.getIntExtra("state", -1);
+                if (data != null) {
+                    index = data.getIntExtra("index", -1);
+                    state = data.getIntExtra("state", -1);
+                }
                 if (index != -1) {
                     //刷新播放信息ui
                     //showPlayInfo();
@@ -308,19 +367,69 @@ public class LocalMusicActivity extends AppCompatActivity {
         PermissionUtil.verifyStoragePermissions(LocalMusicActivity.this);
         try {
             File musicFiles = new File(getExternalStorageDirectory().getAbsolutePath(), "/Music");
-            for(int i = 0; i < musicFiles.listFiles().length; i++) {
-                localMusicPathList.add(musicFiles.listFiles()[i].getAbsolutePath());
+            for(int i = 0; i < Objects.requireNonNull(musicFiles.listFiles()).length; i++) {
+                localMusicPathList.add(Objects.requireNonNull(musicFiles.listFiles())[i].getAbsolutePath());
             }
         } catch (Exception e) {
             Toast.makeText(LocalMusicActivity.this, "加载本地音乐失败\n" + e.getMessage(), Toast.LENGTH_SHORT).show();
             e.printStackTrace();
         }
-
     }
 
     private int getPlayPattern() {
         SharedPreferences sharedPreferences = getSharedPreferences("data", MODE_PRIVATE);
         int pattern = sharedPreferences.getInt("playPattern", -1);
         return pattern == -1 ? 0 : pattern;
+    }
+
+    private void showBottomDialog(int resource) {
+        isManaging = true;
+
+        final Dialog dialog = new Dialog(this, R.style.DialogTheme);
+        View view = View.inflate(this, resource, null);
+        dialog.setContentView(view);
+
+        Window window = dialog.getWindow();
+        if (window != null) {
+            //设置弹出位置
+            window.setGravity(Gravity.BOTTOM);
+            //设置弹出动画
+            window.setWindowAnimations(R.style.main_menu_animStyle);
+            //设置对话框大小
+            window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT);
+        }
+        dialog.show();
+
+        if(resource == R.layout.local_music_manage_dialog) {
+            dialog.findViewById(R.id.local_music_multi_choose_dialog).setOnClickListener(view1 -> {
+                dialog.dismiss();
+                fragmentManager.beginTransaction().replace(R.id.manage_bar_container, localMusicChooseFragment)
+                        .show(manageLocalMusicListFragment).commit();
+                localMusicRecycleViewAdapter.setChooseBoxVisibility(true);
+                localMusicRecycleViewAdapter.notifyDataSetChanged();
+            });
+
+            dialog.findViewById(R.id.local_music_sort_pattern_dialog).setOnClickListener(view12 -> dialog.dismiss());
+        }
+
+        if(resource == R.layout.confirm_delete_dialog) {
+            dialog.findViewById(R.id.delete_local_music).setOnClickListener(view1 -> {
+                dialog.dismiss();
+                try {
+                    for(int index : localMusicRecycleViewAdapter.getSelectedSongsIndex()) {
+                        File song = new File(localMusicPathList.get(index));
+                        DeleteSongsUtil.deleteSongs(song);
+                        localMusicPathList.remove(index);
+                        localMusicInfoList.remove(index);
+                    }
+                    localMusicRecycleViewAdapter.notifyDataSetChanged();
+                } catch (Exception e) {
+                    Toast.makeText(LocalMusicActivity.this, "删除失败\n" + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    e.printStackTrace();
+                }
+            });
+
+            dialog.findViewById(R.id.cancel_delete_local_music).setOnClickListener(view12 -> dialog.dismiss());
+        }
     }
 }

@@ -36,4 +36,5 @@ dependencies {
     implementation 'org.jetbrains:annotations-java5:15.0'
     implementation 'com.bilibili:magicasakura:0.1.9-beta3@aar'
     implementation 'com.hz.android.keyboardlayout:library:1.0'
+    implementation 'org.greenrobot:eventbus:3.1.1'
 }

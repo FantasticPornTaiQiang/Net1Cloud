@@ -51,6 +51,7 @@
                     android:layout_height="match_parent"/>
 
                 <ImageView
+                    android:id="@+id/album_btn"
                     android:layout_width="263dp"
                     android:layout_height="263dp"
                     android:layout_marginTop="60dp"
@@ -283,5 +284,13 @@
 
             </LinearLayout>
         </LinearLayout>
+
+        <FrameLayout
+            android:id="@+id/save_album_image_container"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_alignParentBottom="true"/>
+
     </RelativeLayout>
+
 </FrameLayout>

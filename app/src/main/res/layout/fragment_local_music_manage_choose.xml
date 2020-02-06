@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?android:attr/selectableItemBackground">
+
+    <RelativeLayout
+        android:layout_width="wrap_content"
+        android:layout_height="55dp"
+        android:clickable="true"
+        android:id="@+id/layout_play_all">
+
+        <ImageView
+            android:id="@+id/play_all"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_centerInParent="true"
+            android:layout_gravity="center_vertical"
+            android:layout_marginLeft="17dp"
+            android:layout_marginRight="10dp"
+            android:src="@drawable/list_icn_play" />
+
+        <TextView
+            android:id="@+id/play_all_text"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_toRightOf="@+id/play_all"
+            android:gravity="center_vertical"
+            android:text="播放全部"
+            android:textColor="@color/text_color"
+            android:textSize="17sp" />
+
+        <TextView
+            android:id="@+id/play_all_number"
+            android:layout_width="70dp"
+            android:layout_height="match_parent"
+            android:layout_toRightOf="@+id/play_all_text"
+            android:gravity="center_vertical"
+            android:textSize="14sp" />
+    </RelativeLayout>
+
+    <LinearLayout
+        android:layout_alignParentEnd="true"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:id="@+id/manage_local_music_list_layout">
+
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="55dp"
+            android:layout_centerInParent="true"
+            android:layout_gravity="center|clip_vertical"
+            android:background="?android:attr/selectableItemBackground"
+            android:focusable="false"
+            android:gravity="end"
+            android:paddingLeft="15dp"
+            android:paddingRight="5dp"
+            android:src="@drawable/list_icn_mng" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="55dp"
+            android:text="管理"
+            android:textColor="@color/text_color"
+            android:textSize="17sp"
+            android:layout_alignParentEnd="true"
+            android:gravity="center|clip_vertical"
+            android:focusable="false"
+            android:paddingRight="8dp"/>
+
+    </LinearLayout>
+
+</RelativeLayout>

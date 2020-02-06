@@ -7,12 +7,20 @@
     android:layout_marginTop="4dp"
     android:layout_marginBottom="5dp">
 
+    <ImageView
+        android:id="@+id/local_music_choose_box"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/nact_icn_unchoosed"
+        android:layout_gravity="center_vertical"
+        android:layout_marginStart="10dp"/>
+
     <LinearLayout
         android:layout_weight="100"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:layout_marginStart="20dp">
+        android:layout_marginStart="8dp">
 
         <TextView
             android:id="@+id/local_music_name_text_view"

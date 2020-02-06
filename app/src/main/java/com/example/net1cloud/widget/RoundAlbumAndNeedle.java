@@ -20,7 +20,8 @@ import com.example.net1cloud.R;
 public class RoundAlbumAndNeedle extends View {
     private Bitmap play_needle;
     private Bitmap play_disc;
-    private Bitmap play_avater;
+    private Bitmap album_image_now;
+    private Bitmap album_image_next;
     private Paint mBitPaint;
     private float needleScale;
     private float disc_x;
@@ -60,8 +61,8 @@ public class RoundAlbumAndNeedle extends View {
         needle_y = -49 * needleScale;
         bd_x = disc_x + play_disc.getWidth() / 2f;
         bd_y = disc_y + play_disc.getHeight() / 2f;
-        play_avater = centerSquareScaleBitmap(play_avater, (int) (needleScale * 550f));
-        play_avater = createCircleImage(play_avater);
+        album_image_now = centerSquareScaleBitmap(album_image_now, (int) (needleScale * 550f));
+        album_image_now = createCircleImage(album_image_now);
         mBitPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         mBitPaint.setFilterBitmap(true);
         mBitPaint.setDither(true);
@@ -89,10 +90,10 @@ public class RoundAlbumAndNeedle extends View {
 
         avaterMatrix.reset();
         avaterMatrix.postTranslate(
-                disc_x + play_disc.getWidth() / 2f - play_avater.getWidth() / 2f,
-                disc_y + play_disc.getHeight() / 2f - play_avater.getWidth() / 2f);
+                disc_x + play_disc.getWidth() / 2f - album_image_now.getWidth() / 2f,
+                disc_y + play_disc.getHeight() / 2f - album_image_now.getWidth() / 2f);
         avaterMatrix.postRotate(discRotracre, disc_x + play_disc.getWidth() / 2f, disc_y + play_disc.getHeight() / 2f);
-        canvas.drawBitmap(play_avater, avaterMatrix, mBitPaint);
+        canvas.drawBitmap(album_image_now, avaterMatrix, mBitPaint);
 
         discMatrix.reset();
         discMatrix.postTranslate(disc_x, disc_y);
@@ -102,14 +103,14 @@ public class RoundAlbumAndNeedle extends View {
         if (isPrev || isPrevIn) {
             // prev
             float start = disc_x - getWidth() / 2f - play_disc.getWidth() / 2f;
-            canvas.drawBitmap(play_avater, start + play_disc.getWidth() / 2f - play_avater.getWidth() / 2f,
-                    disc_y + play_disc.getHeight() / 2f - play_avater.getWidth() / 2f, mBitPaint);
+            canvas.drawBitmap(album_image_next, start + play_disc.getWidth() / 2f - album_image_next.getWidth() / 2f,
+                    disc_y + play_disc.getHeight() / 2f - album_image_next.getWidth() / 2f, mBitPaint);
             canvas.drawBitmap(play_disc, start, disc_y, mBitPaint);
         } else if (isNextIn || isNext) {
             // next
             float start1 = getWidth() / 2f + play_disc.getWidth() / 2f + disc_x;
-            canvas.drawBitmap(play_avater, start1 + play_disc.getWidth() / 2f - play_avater.getWidth() / 2f,
-                    disc_y + play_disc.getHeight() / 2f - play_avater.getWidth() / 2f, mBitPaint);
+            canvas.drawBitmap(album_image_next, start1 + play_disc.getWidth() / 2f - album_image_next.getWidth() / 2f,
+                    disc_y + play_disc.getHeight() / 2f - album_image_next.getWidth() / 2f, mBitPaint);
             canvas.drawBitmap(play_disc, start1, disc_y, mBitPaint);
         }
 
@@ -148,6 +149,7 @@ public class RoundAlbumAndNeedle extends View {
                     disc_x = getWidth() / 2f - play_disc.getWidth() / 2f;
                     isNextIn = false;
                     isPlay = true;
+                    album_image_now = album_image_next;
                     invalidate();
                     return;
                 }
@@ -166,6 +168,7 @@ public class RoundAlbumAndNeedle extends View {
                     disc_x = getWidth() / 2f - play_disc.getWidth() / 2f;
                     isPrevIn = false;
                     isPlay = true;
+                    album_image_now = album_image_next;
                     invalidate();
                     return;
                 }
@@ -186,8 +189,8 @@ public class RoundAlbumAndNeedle extends View {
         this.isPlay = false;
         this.isNext = true;
         this.isNextIn = false;
-        play_avater = centerSquareScaleBitmap(albumImage, (int) (needleScale * 550f));
-        play_avater = createCircleImage(play_avater);
+        album_image_next = centerSquareScaleBitmap(albumImage, (int) (needleScale * 550f));
+        album_image_next = createCircleImage(album_image_next);
         invalidate();
     }
 
@@ -195,8 +198,8 @@ public class RoundAlbumAndNeedle extends View {
         this.isPlay = false;
         this.isPrev = true;
         this.isPrevIn = false;
-        play_avater = centerSquareScaleBitmap(albumImage, (int) (needleScale * 550f));
-        play_avater = createCircleImage(play_avater);
+        album_image_next = centerSquareScaleBitmap(albumImage, (int) (needleScale * 550f));
+        album_image_next = createCircleImage(album_image_next);
         invalidate();
     }
 
@@ -204,8 +207,8 @@ public class RoundAlbumAndNeedle extends View {
         this.isPlay = false;
     }
 
-    public void setPlayAvater(Bitmap albumImage) {
-        play_avater = albumImage;
+    public void setAlbumImage(Bitmap albumImage) {
+        album_image_now = albumImage;
     }
 
     /**

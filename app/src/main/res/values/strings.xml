@@ -1,3 +1,31 @@
 <resources>
     <string name="app_name">Net1Cloud</string>
+
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+
+    <!--    xml-->
+    <string name="local_music_add_list">收藏到歌单</string>
+    <string name="local_music_delete">删除下载</string>
+    <string name="choose_all">全选</string>
+    <string name="ok">完成</string>
+    <string name="manage">管理</string>
+    <string name="multi_choose">多选</string>
+    <string name="choose_sort_pattern">选择排序方式</string>
+    <string name="delete_downloaded_songs">删除下载文件</string>
+    <string name="cancel">取消</string>
+
+
+<!--    FragmentChangeMessage-->
+    <string name="hideFragment">hide</string>
+    <string name="showFragment">show</string>
+    <string name="playAll">playAll</string>
+    <string name="complete">complete</string>
+    <string name="chooseAll">chooseAll</string>
+    <string name="notSelectAll">notSelectAll</string>
+    <string name="selectAll">selectAll</string>
+    <string name="deleteSong">deleteSong</string>
+
+<!--    characters-->
+    <string name="localMusicAlbumName">%1$s - %2$s</string>
+
 </resources>
