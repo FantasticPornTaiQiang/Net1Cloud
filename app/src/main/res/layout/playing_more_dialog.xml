@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/top_round_corner">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <ImageView
+            android:id="@+id/album_image"
+            android:layout_width="55dp"
+            android:layout_height="55dp"
+            tools:src="@drawable/placeholder_disk_play_song"
+            android:layout_marginTop="13dp"
+            android:layout_marginStart="13dp"/>
+
+        <TextView
+            android:id="@+id/song_name"
+            android:layout_toEndOf="@id/album_image"
+            android:layout_marginTop="15dp"
+            android:layout_marginStart="9dp"
+            tools:text="The Gong of Knockout"
+            android:textSize="18sp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@android:color/background_dark"/>
+
+        <TextView
+            android:id="@+id/singer_name"
+            android:layout_toEndOf="@id/album_image"
+            android:layout_below="@id/song_name"
+            android:layout_marginTop="1dp"
+            android:layout_marginStart="11dp"
+            tools:text="Fear, and Loathing in Las Vegas"
+            android:textSize="14sp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+    </RelativeLayout>
+
+    <View
+        android:layout_marginTop="10dp"
+        android:layout_width="match_parent"
+        android:layout_height="0.5dp"
+        android:background="@android:color/darker_gray"/>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/playing_more_recycler_view"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:overScrollMode="never"
+        android:scrollbars="vertical"/>
+
+</LinearLayout>

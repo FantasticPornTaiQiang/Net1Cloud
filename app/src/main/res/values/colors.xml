@@ -358,7 +358,7 @@
     <color name="test_color">#696969</color>
     <color name="mgray">#EDEDED</color>
 
-    <color name="half_trans_grey">#80ffffff</color>
+    <color name="half_trans_grey">#40ffffff</color>
 
     <color name="transparent">#00000000</color>
 </resources>

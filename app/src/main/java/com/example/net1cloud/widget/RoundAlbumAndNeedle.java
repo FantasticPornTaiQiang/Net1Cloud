@@ -1,6 +1,7 @@
 package com.example.net1cloud.widget;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -13,9 +14,13 @@ import android.graphics.RadialGradient;
 import android.graphics.Shader;
 import android.graphics.drawable.BitmapDrawable;
 import android.util.AttributeSet;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewConfiguration;
+import android.widget.RelativeLayout;
 
 import com.example.net1cloud.R;
+import com.example.net1cloud.listener.MyLongClickListener;
 
 public class RoundAlbumAndNeedle extends View {
     private Bitmap play_needle;
@@ -38,16 +43,31 @@ public class RoundAlbumAndNeedle extends View {
 
     private boolean isInited = false;
 
+    private Activity activity;
+    private int touchSlop;//最短滑动距离
+    private boolean isLongClick = false; //是否是长点击事件
+    private boolean isRelease = false; //是否已经释放
+    private static int LONG_CLICK_TIME = 700;
+    private MyLongClickListener myLongClickListener;
+    private int downX = 0;//记录按下时的坐标
+    private int downY = 0;
+
     public RoundAlbumAndNeedle(Context context) {
         super(context);
+        activity = (Activity) context;
+        touchSlop = ViewConfiguration.get(activity).getScaledTouchSlop();
     }
 
     public RoundAlbumAndNeedle(Context context, AttributeSet attrs) {
         super(context, attrs);
+        activity = (Activity) context;
+        touchSlop = ViewConfiguration.get(activity).getScaledTouchSlop();
     }
 
     public RoundAlbumAndNeedle(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
+        activity = (Activity) context;
+        touchSlop = ViewConfiguration.get(activity).getScaledTouchSlop();
     }
 
     private void init() {
@@ -269,5 +289,62 @@ public class RoundAlbumAndNeedle extends View {
         //绘制图片
         canvas.drawBitmap(source, 0, 0, paint);
         return target;
+    }
+
+    public void setOnLongClickListener(MyLongClickListener myLongClickListener) {
+        this.myLongClickListener = myLongClickListener;
+    }
+
+    private Runnable timingRunnable = () -> {
+        isLongClick = true;
+        //当用户在LONG_CLICK_TIME时间内没有做抬起滑动等取消动作，则触发longClick事件
+        if(isRelease) {
+            return;
+        }
+        activity.runOnUiThread(() -> {
+            if(myLongClickListener != null) {
+                if(downX > disc_x && downX < disc_x + play_disc.getWidth() && downY > disc_y && downY < disc_y + play_disc.getHeight())
+                    myLongClickListener.onLongClick();
+            }
+        });
+    };
+
+    @SuppressLint("ClickableViewAccessibility")
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        switch (event.getAction()) {
+            case MotionEvent.ACTION_DOWN:
+                break;
+            case MotionEvent.ACTION_MOVE:
+                //当横移或纵移的长度大于系统规定的滑动最短距离时，则视为用户取消了longClick事件
+                if(Math.abs(event.getX() - downX) < touchSlop || Math.abs(event.getY() - downY) < touchSlop || isRelease) {
+                    break;
+                }
+            case MotionEvent.ACTION_UP:
+            case MotionEvent.ACTION_CANCEL:
+            case MotionEvent.ACTION_OUTSIDE:
+                isRelease = true;
+                if(!isLongClick)
+                    ((RelativeLayout)getParent()).performClick();
+                return true;
+        }
+
+        return true;
+    }
+
+    //单击事件时，不拦截，返回false直接调用父ViewGroup的onTouchEvent进行全ViewGroup的单击响应
+    //长按事件时，在区域内则子View响应长按，区域外则子View消费事件
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent event) {
+        if (event.getAction() == MotionEvent.ACTION_DOWN) {
+            downX = (int) event.getX();
+            downY = (int) event.getY();
+            isRelease = false;
+            isLongClick = false;
+            //延迟LONG_CLICK_TIME毫秒的时间，触发长按事件
+            postDelayed(timingRunnable, LONG_CLICK_TIME);
+        }
+
+        return super.dispatchTouchEvent(event);
     }
 }

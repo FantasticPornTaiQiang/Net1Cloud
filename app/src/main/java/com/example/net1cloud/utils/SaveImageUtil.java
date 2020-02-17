@@ -17,7 +17,7 @@ public class SaveImageUtil {
     //保存资源文件中的图片到本地相册,实时刷新
     public static void saveImageToGallery(Context context, Bitmap bmp) {
         // 首先保存图片
-        File appDir = new File(Environment.getExternalStorageDirectory(), "Net1Cloud");
+        File appDir = new File(Environment.getExternalStorageDirectory() + "/Net1Cloud", "albumImage");
         if (!appDir.exists()) {
             if(!appDir.mkdir())
                 Toast.makeText(context, "保存失败", Toast.LENGTH_SHORT).show();

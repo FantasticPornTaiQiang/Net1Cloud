@@ -24,6 +24,8 @@ public class Music implements Serializable {
 
     private boolean hasAlbumImage;
 
+    private int durationInt;
+
     public Music(String musicPath) {
         this.musicPath = musicPath;
         isDownload = true;
@@ -32,7 +34,8 @@ public class Music implements Serializable {
 
     public void setDuration(String duration) {
         int musicDuration = Integer.parseInt(duration);
-        this.duration = TimeUtil.getTimeFromMilis(musicDuration);
+        this.durationInt = musicDuration;
+        this.duration = TimeUtil.getTimeStrFromMilliSeconds(musicDuration);
     }
 
     public String getAlbum() {
@@ -94,4 +97,6 @@ public class Music implements Serializable {
     public void setHasAlbumImage(boolean hasAlbumImage) {
         this.hasAlbumImage = hasAlbumImage;
     }
+
+    public int getDurationInt() { return durationInt; }
 }

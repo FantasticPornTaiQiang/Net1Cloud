@@ -1,12 +1,7 @@
 package com.example.net1cloud.activity;
 
-import androidx.appcompat.app.ActionBar;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
-import androidx.fragment.app.FragmentManager;
-import androidx.fragment.app.FragmentTransaction;
-
 import android.annotation.SuppressLint;
+import android.app.Dialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -14,21 +9,34 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
-import android.util.Log;
+import android.util.DisplayMetrics;
+import android.view.Gravity;
 import android.view.View;
-import android.widget.FrameLayout;
+import android.view.ViewGroup;
+import android.view.Window;
 import android.widget.ImageView;
+import android.widget.RelativeLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.fragment.app.FragmentManager;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
 import com.example.net1cloud.R;
+import com.example.net1cloud.adapter.PlayingMoreRecyclerViewAdapter;
 import com.example.net1cloud.data.FragmentMsg;
 import com.example.net1cloud.data.Music;
 import com.example.net1cloud.fragment.SaveAlbumImageFragment;
+import com.example.net1cloud.utils.LyricUtil;
 import com.example.net1cloud.utils.MusicInfoUtil;
 import com.example.net1cloud.utils.TimeUtil;
 import com.example.net1cloud.utils.ToastUtil;
+import com.example.net1cloud.widget.LyricView;
 import com.example.net1cloud.widget.PlaySeekBar;
 import com.example.net1cloud.widget.RoundAlbumAndNeedle;
 
@@ -38,11 +46,29 @@ import org.greenrobot.eventbus.ThreadMode;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
-import static com.example.net1cloud.service.PlayMusicService.*;
+import static com.example.net1cloud.service.PlayMusicService.CONTINUE;
+import static com.example.net1cloud.service.PlayMusicService.ONLY;
+import static com.example.net1cloud.service.PlayMusicService.ORDERLY;
+import static com.example.net1cloud.service.PlayMusicService.PAUSE;
+import static com.example.net1cloud.service.PlayMusicService.RANDOMLY;
+import static com.example.net1cloud.service.PlayMusicService.START;
 
 public class PlayingActivity extends AppCompatActivity{
+
+    //TODO:1.bug：在歌词界面但已经播放下一首歌曲，以及暂停状态下从歌词回到albumView的RoundAlbumAndNeedle控件的动画问题
+    //TODO:2.切换歌曲的歌词加载，记得使用等待提示与reset，并增加长按复制该行歌词功能
+    //TODO:3.歌单的GreenDao数据库与播放列表换源
+    //TODO:4.定时关闭
+    //TODO:5.音量控制
+    //TODO:6.歌单管理界面的顺序调整
+    //TODO:7.用ViewPager切换歌曲
+    //TODO:8.歌单：本地、播放列表、我喜欢的音乐、歌曲来源、创建的歌单
+    //TODO:9.本地歌单按专辑或歌手检索歌曲
+    //TODO:10.bug：当mp3文件缺少音乐信息时的默认显示处理
+    //TODO:*11.查明加载缓慢的原因并修复
+    //TODO:12.各个歌单的每个歌曲itemView的小菜单选项
+    //TODO:*13.屏幕适配以及文件存储路径优化
 
     private ActionBar actionBar;
     private Toolbar toolbar;
@@ -54,21 +80,24 @@ public class PlayingActivity extends AppCompatActivity{
     private ImageView playingPreButton;
     private ImageView playingNextButton;
     private RoundAlbumAndNeedle roundAlbumAndNeedle;
-    private ImageView albumButton;
-    private FrameLayout saveAlbumImageContainer;
+    private ImageView playingMoreButton;
 //    private AlbumViewPager albumViewPager;
 //    private FragmentAdapter albumAdapter;
+    private RelativeLayout albumViewContainer;
+    private RelativeLayout lyricViewContainer;
+    private LyricView lyricView;
 
     private FragmentManager fragmentManager;
-    private FragmentTransaction fragmentTransaction;
     private SaveAlbumImageFragment saveAlbumImageFragment;
 
     private List<Music> musicList = new ArrayList<>();
     private int index = 0;
     private int duration;
     private boolean isTrack = false;
+    private boolean isLrcSeekByUser = false;
     private int playPattern;//0：列表循环 1：随机播放 2：单曲循环
     private int state = START;//11为播放第一首歌曲 12为暂停 13为继续播放
+    private String source = "本地音乐";
 
 //    private static final int VIEWPAGER_SCROLL_TIME = 390;
 
@@ -79,8 +108,10 @@ public class PlayingActivity extends AppCompatActivity{
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_playing);
 
+        boolean isBundleNull = savedInstanceState == null;
+
         initData();
-        initView();
+        initView(isBundleNull);
         initEvent();
     }
 
@@ -106,8 +137,7 @@ public class PlayingActivity extends AppCompatActivity{
     public void onGetFragmentChangeMessage(FragmentMsg fragmentMsg) {
         if ("SaveAlbumImageFragment".equals(fragmentMsg.getWhatFragment())) {
             if (fragmentMsg.getMsgString().equals(getString(R.string.hideFragment))) {
-//                    fragmentTransaction.remove(fragmentManager.findFragmentByTag("SaveAlbumImageFragment")).commit();
-                saveAlbumImageContainer.setVisibility(View.GONE);
+                fragmentManager.beginTransaction().hide(saveAlbumImageFragment).commit();
             }
         }
     }
@@ -159,7 +189,9 @@ public class PlayingActivity extends AppCompatActivity{
                 if(!isTrack){
                     int progress = ((currentPosition * 1000) / duration);
                     playSeekBar.setProgress(progress);
-                    currentTextView.setText(TimeUtil.getTimeFromMilis(currentPosition));
+                    lyricView.setProgress(currentPosition / 1000, isLrcSeekByUser);
+                    if(isLrcSeekByUser) isLrcSeekByUser = false;
+                    currentTextView.setText(TimeUtil.getTimeStrFromMilliSeconds(currentPosition));
                 }
             }
 
@@ -269,8 +301,8 @@ public class PlayingActivity extends AppCompatActivity{
         EventBus.getDefault().register(this);
     }
 
-    private void initView() {
-        initFragment();
+    private void initView(boolean isBundleNull) {
+        initFragment(isBundleNull);
 
         totalTextView = findViewById(R.id.music_duration);
         totalTextView.setText(musicList.get(index).getDuration());
@@ -342,16 +374,150 @@ public class PlayingActivity extends AppCompatActivity{
 //        albumViewPager = findViewById(R.id.album_view_pager);
 //        setViewPager();
 
-        albumButton = findViewById(R.id.album_btn);
-        albumButton.setOnLongClickListener(view -> {
-            ((SaveAlbumImageFragment) Objects.requireNonNull(fragmentManager.findFragmentByTag("SaveAlbumImageFragment"))).setAlbumImage(musicList.get(index).getAlbumImage());
-            saveAlbumImageContainer.setVisibility(View.VISIBLE);
-            //fragmentTransaction.show(saveAlbumImageFragment);
-            return false;
+        roundAlbumAndNeedle.setOnLongClickListener(() -> {
+            saveAlbumImageFragment.setAlbumImage(musicList.get(index).getAlbumImage());
+            fragmentManager.beginTransaction().show(saveAlbumImageFragment).commit();
+        });
+        playingMoreButton = findViewById(R.id.playing_more);
+        playingMoreButton.setOnClickListener(view -> showBottomDialog(R.layout.playing_more_dialog));
+        albumViewContainer = findViewById(R.id.album_view_container);
+        lyricViewContainer = findViewById(R.id.lyric_view_container);
+        lyricViewContainer.setVisibility(View.INVISIBLE);
+        albumViewContainer.setOnClickListener(view -> {
+            lyricViewContainer.setVisibility(View.VISIBLE);
+            albumViewContainer.setVisibility(View.INVISIBLE);
+        });
+        lyricView = findViewById(R.id.lyric_view);
+        lyricView.setLrcRows(LyricUtil.parseToLyricRowList(this, musicList.get(index).getName(),
+                musicList.get(index).getDurationInt()));
+        lyricView.setOnPlayClickListener(progress -> {
+            Intent intent = new Intent("com.example.net1cloud.playMusicService");
+            intent.putExtra("progress", progress * 1000 / duration);
+            if(state == CONTINUE)
+                intent.putExtra("isPlayOrPause", true);//相当于click了一次播放按钮
+            sendBroadcast(intent);
+        });
+        lyricView.setOnViewClickListener(() -> {
+            albumViewContainer.setVisibility(View.VISIBLE);
+            lyricViewContainer.setVisibility(View.INVISIBLE);
         });
     }
 
-//    private void setViewPager() {
+    private void initFragment(boolean isBundleNull) {
+        fragmentManager = getSupportFragmentManager();
+        saveAlbumImageFragment = new SaveAlbumImageFragment();
+        if(isBundleNull)
+            fragmentManager.beginTransaction().add(R.id.save_album_image_container, saveAlbumImageFragment).hide(saveAlbumImageFragment).commit();
+    }
+
+    //根据状态更改播放暂停按钮UI界面
+    //播放有三种情况，1.刚进入此activity需要手动设置播放图标，相当于在代码中点了一下控件
+    //2.播放完歌曲，进入下一首，更新图标，此时只更新图标，圆盘的处理逻辑已经内部写好，无需改动[bug在此产生]
+    //3.歌曲已经是暂停状态，用户点击播放，更新图标
+    //有个bug，state会有一次值为-1，暂时先采用笨办法解决
+    private void updatePlayOrPauseUI(int state, boolean isNext) {
+        switch (state) {
+            case START:
+            case PAUSE:
+                if(!isNext)
+                    roundAlbumAndNeedle.play();
+                lyricView.play();
+                playingPlayButton.setImageResource(R.drawable.play_rdi_btn_pause);
+                break;
+            case CONTINUE:
+                roundAlbumAndNeedle.pause();
+                lyricView.pause();
+                playingPlayButton.setImageResource(R.drawable.play_rdi_btn_play);
+                break;
+            default:
+                if(!isNext)
+                    roundAlbumAndNeedle.play();
+                lyricView.play();
+                break;
+        }
+    }
+
+    private void setSeekBarListener() {
+        if (playSeekBar != null)
+            playSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                @Override
+                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                    //拖动时更新UI，progress：进度(0~1000)，fromUser：是否由用户操作导致改变的
+                    if(fromUser)
+                        currentTextView.setText(TimeUtil.getTimeStrFromMilliSeconds((long)((progress / 1000.) * duration)));
+                }
+
+                @Override
+                public void onStartTrackingTouch(SeekBar seekBar) {
+                    //拖动开始，暂停对SeekBar的监听
+                    isTrack = true;
+                }
+
+                @Override
+                public void onStopTrackingTouch(SeekBar seekBar) {
+                    //拖动停止,发送广播更新播放位置
+                    isTrack = false;
+                    isLrcSeekByUser = true;
+                    int progress = seekBar.getProgress();
+                    Intent intent = new Intent("com.example.net1cloud.playMusicService");
+                    intent.putExtra("progress", progress);
+                    sendBroadcast(intent);
+                }
+            });
+    }
+
+    private void showBottomDialog(int resource) {
+        final Dialog dialog = new Dialog(this, R.style.DialogTheme);
+        View view = View.inflate(this, resource, null);
+        dialog.setContentView(view);
+
+        Window window = dialog.getWindow();
+        if (window != null) {
+            //设置弹出位置
+            window.setGravity(Gravity.BOTTOM);
+            //设置弹出动画
+            window.setWindowAnimations(R.style.main_menu_animStyle);
+            //设置对话框大小
+//            window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT,ViewGroup.LayoutParams.WRAP_CONTENT);
+            DisplayMetrics dm = new DisplayMetrics();
+            getWindowManager().getDefaultDisplay().getMetrics(dm);
+            window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, dm.heightPixels * 3 / 5);
+        }
+        dialog.show();
+
+        if(resource == R.layout.playing_more_dialog) {
+            RecyclerView playingMoreRecyclerView = dialog.findViewById(R.id.playing_more_recycler_view);
+            playingMoreRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+            PlayingMoreRecyclerViewAdapter playingMoreRecyclerViewAdapter =
+                    new PlayingMoreRecyclerViewAdapter(musicList.get(index).getArtist(), musicList.get(index).getAlbum(), source, this);
+            playingMoreRecyclerView.setAdapter(playingMoreRecyclerViewAdapter);
+
+            ((ImageView)dialog.findViewById(R.id.album_image)).setImageBitmap(musicList.get(index).getAlbumImage());
+            ((TextView)dialog.findViewById(R.id.song_name)).setText(musicList.get(index).getName());
+            ((TextView)dialog.findViewById(R.id.singer_name)).setText(musicList.get(index).getArtist());
+
+            playingMoreRecyclerViewAdapter.setOnItemClickListener(position -> {
+                switch (position) {
+                    case 0:
+                        //TODO:收藏到歌单
+                        break;
+                    case 3:
+                        //TODO:来源
+                        break;
+                    case 8:
+                        //TODO:定时关闭
+                        break;
+                    default:
+                        break;
+                }
+            });
+        }
+
+
+    }
+
+
+    //    private void setViewPager() {
 //        albumViewPager.setOffscreenPageLimit(2);
 //        PlaybarPagerTransformer transformer = new PlaybarPagerTransformer();
 //        albumAdapter = new FragmentAdapter(getSupportFragmentManager());
@@ -545,64 +711,5 @@ public class PlayingActivity extends AppCompatActivity{
 //        }
 //
 //    }
-
-    private void initFragment() {
-        fragmentManager = getSupportFragmentManager();
-        fragmentTransaction = fragmentManager.beginTransaction();
-        saveAlbumImageContainer = findViewById(R.id.save_album_image_container);
-        saveAlbumImageFragment = new SaveAlbumImageFragment();
-        fragmentTransaction.add(R.id.save_album_image_container, saveAlbumImageFragment, "SaveAlbumImageFragment").commit();
-        saveAlbumImageContainer.setVisibility(View.GONE);
-    }
-
-    //根据状态更改播放暂停按钮UI界面
-    //播放有三种情况，1.刚进入此activity需要手动设置播放图标，相当于在代码中点了一下控件
-    //2.播放完歌曲，进入下一首，更新图标，此时只更新图标，圆盘的处理逻辑已经内部写好，无需改动[bug在此产生]
-    //3.歌曲已经是暂停状态，用户点击播放，更新图标
-    //有个bug，state会有一次值为-1，暂时先采用笨办法解决
-    private void updatePlayOrPauseUI(int state, boolean isNext) {
-        switch (state) {
-            case START:
-            case PAUSE:
-                if(!isNext) roundAlbumAndNeedle.play();
-                playingPlayButton.setImageResource(R.drawable.play_rdi_btn_pause);
-                break;
-            case CONTINUE:
-                roundAlbumAndNeedle.pause();
-                playingPlayButton.setImageResource(R.drawable.play_rdi_btn_play);
-                break;
-            default:
-                if(!isNext) roundAlbumAndNeedle.play();
-                break;
-        }
-    }
-
-    private void setSeekBarListener() {
-        if (playSeekBar != null)
-            playSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-                @Override
-                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                    //拖动时更新UI，progress：进度(0~1000)，fromUser：是否由用户操作导致改变的
-                    if(fromUser)
-                        currentTextView.setText(TimeUtil.getTimeFromMilis((long)((progress / 1000.) * duration)));
-                }
-
-                @Override
-                public void onStartTrackingTouch(SeekBar seekBar) {
-                    //拖动开始，暂停对SeekBar的监听
-                    isTrack = true;
-                }
-
-                @Override
-                public void onStopTrackingTouch(SeekBar seekBar) {
-                    //拖动停止,发送广播更新播放位置
-                    isTrack = false;
-                    int progress = seekBar.getProgress();
-                    Intent intent = new Intent("com.example.net1cloud.playMusicService");
-                    intent.putExtra("progress", progress);
-                    sendBroadcast(intent);
-                }
-            });
-    }
 
 }

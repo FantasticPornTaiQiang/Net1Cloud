@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     xmlns:tools="http://schemas.android.com/tools">
@@ -16,8 +17,7 @@
         android:layout_height="match_parent"
         android:background="#70000000" />
 
-    <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-        xmlns:app="http://schemas.android.com/apk/res-auto"
+    <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical">
@@ -33,59 +33,51 @@
             android:theme="@style/Theme.AppCompat"
             app:popupTheme="@style/ThemeOverlay.AppCompat.Light" />
 
-        <FrameLayout
-            android:id="@+id/headerView"
+        <RelativeLayout
+            android:id="@+id/album_view_container"
             android:layout_width="match_parent"
-            android:layout_height="390dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
             android:layout_below="@+id/playing_toolbar"
-            android:layout_marginTop="-6dp">
+            android:layout_above="@id/bottom_control">
 
-            <RelativeLayout
+<!--            <ImageView-->
+<!--                android:id="@+id/album_btn"-->
+<!--                android:layout_width="263dp"-->
+<!--                android:layout_height="263dp"-->
+<!--                android:layout_marginTop="60dp"-->
+<!--                android:layout_centerHorizontal="true"-->
+<!--                android:scaleType="fitCenter"-->
+<!--                android:src="@drawable/play_disc_halo" />-->
+
+            <!--                <com.wm.remusic.widget.AlbumViewPager-->
+            <!--                    android:id="@+id/view_pager"-->
+            <!--                    android:layout_width="match_parent"-->
+            <!--                    android:layout_height="263dp"-->
+            <!--                    android:layout_marginTop="60dp"-->
+            <!--                    android:layout_centerHorizontal="true"-->
+            <!--                    android:layout_gravity="center_horizontal" />-->
+
+            <com.example.net1cloud.widget.RoundAlbumAndNeedle
+                android:id="@+id/round_album_and_needle_view"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+
+            <View
+                android:id="@+id/view_line"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:layout_marginTop="10dp"
-                android:orientation="horizontal">
-                <com.example.net1cloud.widget.RoundAlbumAndNeedle
-                    android:id="@+id/round_album_and_needle_view"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"/>
+                android:layout_height="1.0dip"
+                android:layout_alignParentTop="true"
+                android:background="@drawable/play_topbar_line" />
 
-                <ImageView
-                    android:id="@+id/album_btn"
-                    android:layout_width="263dp"
-                    android:layout_height="263dp"
-                    android:layout_marginTop="60dp"
-                    android:layout_centerHorizontal="true"
-                    android:scaleType="fitCenter"
-                    android:src="@drawable/play_disc_halo" />
-
-<!--                <com.example.net1cloud.widget.AlbumViewPager-->
-<!--                    android:id="@+id/album_view_pager"-->
-<!--                    android:layout_width="match_parent"-->
-<!--                    android:layout_height="match_parent"-->
-<!--                    android:layout_centerHorizontal="true"-->
-<!--                    android:layout_gravity="center_horizontal" />-->
-
-                <View
-                    android:id="@+id/view_line"
-                    android:layout_width="match_parent"
-                    android:layout_height="1.0dip"
-                    android:layout_alignParentTop="true"
-                    android:background="@drawable/play_topbar_line" />
-
-            </RelativeLayout>
-
-        </FrameLayout>
-
-
+        </RelativeLayout>
 
         <RelativeLayout
-            android:id="@+id/lrcviewContainer"
+            android:id="@+id/lyric_view_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_above="@+id/bottom_control"
-            android:layout_marginTop="?attr/actionBarSize"
-            android:visibility="invisible">
+            android:layout_marginTop="?attr/actionBarSize">
 
             <LinearLayout
                 android:id="@+id/volume_layout"
@@ -118,28 +110,37 @@
                     android:thumbOffset="3.0dip" />
             </LinearLayout>
 
-            <TextView
-                android:id="@+id/tragetlrc"
-                android:layout_width="100dp"
-                android:layout_height="30dp"
-                android:layout_alignParentBottom="true"
-                android:layout_centerHorizontal="true"
-                android:layout_gravity="bottom|center_horizontal"
-                android:layout_marginBottom="10dp"
-                android:background="#70d7d7d7"
-                android:focusable="false"
-                android:gravity="center"
-                android:padding="5dp"
-                android:text="获取封面和歌词"
-                android:textAlignment="center" />
+<!--            <TextView-->
+<!--                android:id="@+id/tragetlrc"-->
+<!--                android:layout_width="100dp"-->
+<!--                android:layout_height="30dp"-->
+<!--                android:layout_alignParentBottom="true"-->
+<!--                android:layout_centerHorizontal="true"-->
+<!--                android:layout_gravity="bottom|center_horizontal"-->
+<!--                android:layout_marginBottom="10dp"-->
+<!--                android:background="#70d7d7d7"-->
+<!--                android:focusable="false"-->
+<!--                android:gravity="center"-->
+<!--                android:padding="5dp"-->
+<!--                android:text="获取封面和歌词"-->
+<!--                android:textAlignment="center" />-->
 
-            <!--<com.example.net1cloud.widget.LrcView-->
-                <!--android:id="@+id/lrcview"-->
-                <!--android:layout_width="match_parent"-->
-                <!--android:layout_height="match_parent"-->
-                <!--android:layout_below="@+id/volume_layout"-->
-                <!--android:layout_marginTop="10dp" />-->
+            <com.example.net1cloud.widget.LyricView
+                android:id="@+id/lyric_view"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_below="@id/volume_layout"
+                android:layout_marginTop="3dp" />
+
         </RelativeLayout>
+
+<!--        <FrameLayout-->
+<!--            android:id="@+id/header_view_container"-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:layout_below="@+id/playing_toolbar"-->
+<!--            android:layout_above="@id/bottom_control"-->
+<!--            android:clickable="true"/>-->
 
         <LinearLayout
             android:id="@+id/bottom_control"

@@ -1,14 +1,5 @@
 package com.example.net1cloud.activity;
 
-import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.SearchView;
-import androidx.appcompat.widget.Toolbar;
-import androidx.fragment.app.FragmentManager;
-import androidx.fragment.app.FragmentTransaction;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-
 import android.app.Dialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -16,7 +7,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -24,6 +14,14 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.Toast;
+
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.SearchView;
+import androidx.appcompat.widget.Toolbar;
+import androidx.fragment.app.FragmentManager;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.net1cloud.R;
 import com.example.net1cloud.adapter.LocalMusicRecycleViewAdapter;
@@ -95,6 +93,7 @@ public class LocalMusicActivity extends AppCompatActivity {
         if ("LocalMusicManageChooseFragment".equals(fragmentMsg.getWhatFragment())) {
             if (fragmentMsg.getMsgString().equals(getString(R.string.manage))) {
                 showBottomDialog(R.layout.local_music_manage_dialog);
+                isManaging = true;
             } else if (fragmentMsg.getMsgString().equals(getString(R.string.playAll))) {
                 index = 0;
                 //点击全部播放则默认播放第一首歌
@@ -137,8 +136,6 @@ public class LocalMusicActivity extends AppCompatActivity {
         initFragment();
         EventBus.getDefault().register(this);
     }
-
-    //TODO:1.管理歌单操作（记得同步本地、localMusicPathList、localMusicInfoList）
 
     private void initFragment() {
         fragmentManager = getSupportFragmentManager();
@@ -367,8 +364,10 @@ public class LocalMusicActivity extends AppCompatActivity {
         PermissionUtil.verifyStoragePermissions(LocalMusicActivity.this);
         try {
             File musicFiles = new File(getExternalStorageDirectory().getAbsolutePath(), "/Music");
-            for(int i = 0; i < Objects.requireNonNull(musicFiles.listFiles()).length; i++) {
-                localMusicPathList.add(Objects.requireNonNull(musicFiles.listFiles())[i].getAbsolutePath());
+            for(File musicFile : Objects.requireNonNull(musicFiles.listFiles())) {
+                if(!musicFile.getName().substring(musicFile.getName().lastIndexOf(".") + 1).equals("mp3"))
+                    continue;
+                localMusicPathList.add(musicFile.getAbsolutePath());
             }
         } catch (Exception e) {
             Toast.makeText(LocalMusicActivity.this, "加载本地音乐失败\n" + e.getMessage(), Toast.LENGTH_SHORT).show();
@@ -383,8 +382,6 @@ public class LocalMusicActivity extends AppCompatActivity {
     }
 
     private void showBottomDialog(int resource) {
-        isManaging = true;
-
         final Dialog dialog = new Dialog(this, R.style.DialogTheme);
         View view = View.inflate(this, resource, null);
         dialog.setContentView(view);
